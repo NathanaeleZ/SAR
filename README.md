@@ -1,0 +1,8 @@
+# Avancement SAR
+
+Nathanaël CHAUVIN
+
+17/09 Début écriture de la spécification
+19/09 fin écriture de la spécification personnel
+24/09 Début écriture du design
+27/09 Ecriture du design dans le source de CBroker, création de la class Annuaire pour la gestion des brokers et création de la class rendezVous pour la gestion des connexions

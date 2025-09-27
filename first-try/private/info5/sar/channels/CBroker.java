@@ -17,7 +17,13 @@
 package info5.sar.channels;
 
 public class CBroker extends Broker {
+// Contains an Annuaire class which contains a Map of all Brokers
+// Also contains 2 Map one connect Map et one accept Map
 
+	
+// This create the 2 accept et connect Map
+// For the accept map the keys are the ports number and the values are a RendezVous 
+// For the connect map the keys are the ports number and the values are a list of RendezVous 
   public CBroker(String name) {
     super(name);
     throw new RuntimeException("NYI");
