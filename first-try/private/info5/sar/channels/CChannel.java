@@ -15,6 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
  */
 package info5.sar.channels;
+import info5.sar.utils.*;
 
 public class CChannel extends Channel {
 	// To make a connection we give a channel to one task and another channel to the other task
@@ -22,15 +23,23 @@ public class CChannel extends Channel {
 	// A Channel has a circular buffer.
 	// When we try to write but the buffer is full it throw an exception
 	// The channel is bidirectionnal so both task can write and read.
+	private boolean disconnected;
+	private CChannel neighbor_channel;
+	private CircularBuffer circular_buffer;
 
   protected CChannel(Broker broker, int port) {
     super(broker);
-    throw new RuntimeException("NYI");
+    disconnected=false;
+    circular_buffer=new CircularBuffer(8);
   }
 
   // added for helping debugging applications.
   public String getRemoteName() {
     throw new RuntimeException("NYI");
+  }
+  
+  private void add_neighbor(CChannel c) {
+	  neighbor_channel=c;
   }
 
   // This method will write down the data from the circular buffer of this channel.
@@ -39,6 +48,9 @@ public class CChannel extends Channel {
   // Before reading check if other channel disconnected
   @Override
   public int read(byte[] bytes, int offset, int length) {
+	for(int i=0;i<length;i++) {
+		bytes[offset+i]=circular_buffer.pull();
+	}
     throw new RuntimeException("NYI");
   }
   // The write method write inside the the other channel buffer.
@@ -50,30 +62,42 @@ public class CChannel extends Channel {
   // Before writing check if other channel disconnected
   @Override
   public int write(byte[] bytes, int offset, int length) {
-    throw new RuntimeException("NYI");
+	  return this.neighbor_channel.receive(bytes, offset, length);
   }
 
   // This method turn the variable disconnected to true.
   // 
   @Override
   public void disconnect() {
-    throw new RuntimeException("NYI");
+	  this.disconnected=true;
   }
 
   // this methode ask the other channel if it is disonnected and send yes if yes.
   // To do this the other channel has a get_disconnected() method 
   @Override
   public boolean disconnected() {
-    throw new RuntimeException("NYI");
+    return this.neighbor_channel.get_disconnected();
   }
   
   // This method change the value to true of the boolean disconnect after the other channel ask for a deconnection
-  public void get_disconnect() {}
+  public boolean get_disconnected() {
+	  return this.disconnected;
+  }
   
   // This method is call by the write method from the other channel
   // It will write inside the buffer 
   public int receive(byte[] bytes, int offset, int length) {
-	  throw new RuntimeException("NYI");
+	  int cpt=0;
+	  try {
+		  for(int i=0;i<length;i++) {
+			  this.circular_buffer.push(bytes[offset+i]);
+			  cpt++;
+		  }
+		  return cpt;
+	  }catch (IllegalStateException e) {
+		  System.out.println("Full");
+		  return cpt;
+	  }
   }
 
 }

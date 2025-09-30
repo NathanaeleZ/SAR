@@ -34,3 +34,5 @@ Quand un broker veut accèder à un autre Broker il regarde dans sa Map les diff
 
 ![Channel](channel.png)
 
+# Global vision
+![global](global.png)
