@@ -29,3 +29,8 @@ Les brokers se partagent une Map(un annuaire) avec comme clef le nom et en valeu
 
 Pour récupèrer cet objet annuaire il y a une méthode static getAnnuaire() dans Broker
 Quand un broker veut accèder à un autre Broker il regarde dans sa Map les différents Brokers disponibles
+
+# Channel
+
+![Channel](channel.png)
+

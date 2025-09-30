@@ -29,11 +29,20 @@ public class CBroker extends Broker {
     throw new RuntimeException("NYI");
   }
 
+ // When a task accept a port first the broker looks inside his connect Map.
+ // If there is already a task waiting inside a RendezVous then we free this one and both task receive a channel to communicate
+  // If no task already waiting then we make this task wait inside a RendezVous and we add the rendezVous and the port number to the Accept Map
   @Override
   public Channel accept(int port) {
     throw new RuntimeException("NYI");
   }
 
+  
+  // When a task connect trough her broker the broker looks inside his annuaire.
+  // If the name of the asked channel doesn't exist then error
+  // If it exists then their is 2 case.
+  // First case their is already a task waiting (inside a RendezVous)with an accept with the right port number
+  // Second case no task waiting so we make the one asking waiting inside a RendezVous that we add to the list of connect of the Broker
   @Override
   public Channel connect(String name, int port) {
     throw new RuntimeException("NYI");

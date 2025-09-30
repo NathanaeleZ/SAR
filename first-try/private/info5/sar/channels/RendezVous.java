@@ -18,11 +18,9 @@ public class RendezVous {
 	            mutex.acquire();
 	            narrived++;
 	            if (narrived < nexpected) {
-	                System.out.println("Acquired : " + Thread.currentThread().getId());
 	                mutex.release();
 	                rdv.acquire();
 	            } else {
-	                System.out.println("Released : " + Thread.currentThread().getId());
 	                rdv.release(nexpected - 1);
 	                mutex.release();
 	            }
