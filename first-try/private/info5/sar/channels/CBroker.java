@@ -34,47 +34,32 @@ public class CBroker extends Broker {
     this.connection_map = new HashMap<Integer, ArrayList<RendezVous>>();
   }
 
-  private void get_annuaire(Annuaire a) {
+  public void set_annuaire(Annuaire a) {
 	  annuaire=a;
   }
- // When a task accept a port first the broker looks inside his connect Map.
- // If there is already a task waiting inside a RendezVous then we free this one and both task receive a channel to communicate
-  // If no task already waiting then we make this task wait inside a RendezVous and we add the rendezVous and the port number to the Accept Map
   @Override
   public Channel accept(int port) {
-	  ArrayList<RendezVous> rdvList = connection_map.get(port);
+      ArrayList<RendezVous> rdvs = connection_map.get(port);
 
-	    if (rdvList != null) {
-	        // Il existe déjà des rendez-vous (donc potentiellement des connect en attente)
-	        ArrayList<RendezVous> toRemove = new ArrayList<>();
+      if (rdvs != null) {
+          for (RendezVous rdv : rdvs) {
+              if (rdv.accept_or_connect().equals("connect")) {
+                  rdvs.remove(rdv);
+                  return rdv.come(this);
+              }
+          }
+          RendezVous newRdv = new RendezVous(0);
+          rdvs.add(newRdv);
+          return newRdv.come(this);
+      } else {
+          ArrayList<RendezVous> newList = new ArrayList<>();
+          RendezVous newRdv = new RendezVous(0); // 0 pour accept
+          newList.add(newRdv);
+          connection_map.put(port, newList);
+          return newRdv.come(this);
+      }
+  }
 
-	        for (RendezVous rdv : rdvList) {
-	            // On regarde si c’est un rendez-vous côté connect ou accept
-	            if (rdv.accept_or_connect().equals("accept")) {
-	                // Déjà un accept → on le jette
-	                toRemove.add(rdv);
-	            } else if (rdv.accept_or_connect().equals("connect")) {
-	                // Il y a un connect qui attend → on connecte les deux
-	                Channel channel = rdv.come(this);
-	                toRemove.add(rdv);
-	                rdvList.removeAll(toRemove);
-	                return channel;
-	            }
-	        }
-
-	        // Si on arrive ici, aucun connect n’était en attente
-	        RendezVous newRdv = new RendezVous(0);
-	        rdvList.add(newRdv);
-	        return newRdv.come(this);
-	    } else {
-	        // Aucun rendez-vous sur ce port → on crée la liste et le premier accept
-	        ArrayList<RendezVous> newList = new ArrayList<>();
-	        RendezVous newRdv = new RendezVous(0);
-	        newList.add(newRdv);
-	        connection_map.put(port, newList);
-	        return newRdv.come(this);
-	    }
-	}
 
   
   // When a task connect trough her broker the broker looks inside his annuaire.
@@ -88,7 +73,29 @@ public class CBroker extends Broker {
 	if(target == null) {
 		throw new IllegalArgumentException("Broker " + name + " introuvable");
 	}
-    throw new RuntimeException("NYI");
+    return target.make_connection(port);
   }
+
+  public Channel make_connection(int port) {
+	    ArrayList<RendezVous> rdvs = connection_map.get(port);
+
+	    if (rdvs != null) {
+	        for (RendezVous rdv : rdvs) {
+	            if (rdv.accept_or_connect().equals("accept")) {
+	                rdvs.remove(rdv);
+	                return rdv.come(this);
+	            }
+	        }
+	        RendezVous newRdv = new RendezVous(1); // 1 pour connect
+	        rdvs.add(newRdv);
+	        return newRdv.come(this);
+	    } else {
+	        ArrayList<RendezVous> newList = new ArrayList<>();
+	        RendezVous newRdv = new RendezVous(1); // 1 pour connect
+	        newList.add(newRdv);
+	        connection_map.put(port, newList);
+	        return newRdv.come(this);
+	    }
+	}
 
 }

@@ -14,7 +14,8 @@ class Server implements Runnable {
 		channel =broker.accept(1000);
 		byte[] tab=new byte[8];
 		channel.read(tab, 0, 0);
-		System.out.println(tab.toString());
+		System.out.println("[Server] Message reçu : " + new String(tab));
+
 	}
 
 	Broker get_broker() {
