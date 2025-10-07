@@ -32,6 +32,13 @@ public class CChannel extends Channel {
     disconnected=false;
     circular_buffer=new CircularBuffer(8);
   }
+  
+  protected CChannel(Broker broker) {
+	    super(broker);
+	    disconnected=false;
+	    circular_buffer=new CircularBuffer(8);
+	  }
+
 
   // added for helping debugging applications.
   public String getRemoteName() {

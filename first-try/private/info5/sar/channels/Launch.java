@@ -9,8 +9,11 @@ public class Launch {
 		Annuaire annuaire=new Annuaire();
 		annuaire.add(b1);
 		annuaire.add(b2);
-		Task t1 =new Task(b1);
-		Task t2=new Task(b1);
+		Client t1 =new Client(b1);
+		Server t2=new Server(b1);
+		
+		t1.run();
+		t2.run();
 		
 	}
 
