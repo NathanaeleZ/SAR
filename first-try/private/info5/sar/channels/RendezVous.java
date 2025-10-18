@@ -7,6 +7,7 @@ public class RendezVous {
 	 Semaphore rdv = new Semaphore(0);
 	    int nexpected, narrived;
 	    int connection;
+	    CChannel firstChannel;
 
 	    Semaphore mutex = new Semaphore(1); // exclusion mutuelle
 
@@ -20,15 +21,17 @@ public class RendezVous {
 	            mutex.acquire();
 	            narrived++;
 	            if (narrived < nexpected) {
-	            	CChannel channel1=new CChannel(broker);
+	            	firstChannel = new CChannel(broker);
 	                mutex.release();
 	                rdv.acquire();
-	                return channel1;
+	                return firstChannel;
 	            } else {
-	            	CChannel channel2=new CChannel(broker);
+	            	CChannel secondChannel = new CChannel(broker);
+	                secondChannel.add_neighbor(firstChannel);
+	                firstChannel.add_neighbor(secondChannel);
 	                rdv.release(nexpected - 1);
 	                mutex.release();
-	                return channel2;
+	                return secondChannel;
 	            }
 	        } catch (InterruptedException e) {
 	            e.printStackTrace();

@@ -1,20 +1,22 @@
 package info5.sar.channels;
 
-class Client implements Runnable {
+class Client extends Task {
 	Broker broker;
 	Channel channel;
 
-	Client(Broker b) {
+	Client(Broker b, String name) {
+		super(name, b);
 		broker = b;
 	}
 
-	@Override
-	public void run() {
-		channel = broker.connect("b2", 1000);
-		channel.write("Coucou".getBytes(), 0, 8);
+	public Runnable get_runnable() {
+		return new Runnable() {
+			public void run() {
+				channel = broker.connect("b2", 1000);
+				System.out.println("Client connected");
+				channel.write("Coucou".getBytes(), 0, "Coucou".length());
+			}
+		};
 	}
 
-	Broker get_broker() {
-		return broker;
-	}
 }
