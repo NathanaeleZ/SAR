@@ -13,7 +13,7 @@ public class Launch {
 		b2.set_annuaire(annuaire);
 		Client client = new Client(b1, "c1");
 		Server server = new Server(b2, "s2");
-
+		System.out.println("Lancement");
 		client.start(client.get_runnable());
 		server.start(server.get_runnable());
 

@@ -12,6 +12,7 @@ class Server extends Task {
 	public Runnable get_runnable() {
 		return new Runnable() {
 			public void run() {
+				System.out.println("Server accepting...");
 				channel = broker.accept(1000);
 				byte[] tab = new byte[6];
 				int n =channel.read(tab, 0, tab.length);

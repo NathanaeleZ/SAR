@@ -12,6 +12,7 @@ class Client extends Task {
 	public Runnable get_runnable() {
 		return new Runnable() {
 			public void run() {
+				System.out.println("Client connecting...");
 				channel = broker.connect("b2", 1000);
 				System.out.println("Client connected");
 				channel.write("Coucou".getBytes(), 0, "Coucou".length());

@@ -16,16 +16,18 @@ public class RendezVous {
 	        this.connection=connection;
 	    }
 
-	    CChannel come(Broker broker) {
+	    synchronized CChannel  come(Broker broker) {
 	        try {
 	            mutex.acquire();
 	            narrived++;
 	            if (narrived < nexpected) {
+	            	System.out.println("Arrivé du premier");
 	            	firstChannel = new CChannel(broker);
 	                mutex.release();
 	                rdv.acquire();
 	                return firstChannel;
 	            } else {
+	            	System.out.println("Arrivé du second");
 	            	CChannel secondChannel = new CChannel(broker);
 	                secondChannel.add_neighbor(firstChannel);
 	                firstChannel.add_neighbor(secondChannel);

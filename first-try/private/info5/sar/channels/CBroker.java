@@ -19,6 +19,7 @@ package info5.sar.channels;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CBroker extends Broker {
 // Contains an Annuaire class which contains a Map of all Brokers
@@ -31,7 +32,7 @@ public class CBroker extends Broker {
 // For the connect map the keys are the ports number and the values are a list of RendezVous 
   public CBroker(String name) {
     super(name);
-    this.connection_map = new HashMap<Integer, ArrayList<RendezVous>>();
+    this.connection_map = new ConcurrentHashMap<Integer, ArrayList<RendezVous>>();
   }
 
   public void set_annuaire(Annuaire a) {
@@ -40,20 +41,23 @@ public class CBroker extends Broker {
   @Override
   public Channel accept(int port) {
       ArrayList<RendezVous> rdvs = connection_map.get(port);
-
       if (rdvs != null) {
-          for (RendezVous rdv : rdvs) {
-              if (rdv.accept_or_connect().equals("connect")) {
-                  rdvs.remove(rdv);
-                  return rdv.come(this);
+          synchronized (rdvs) {
+              java.util.Iterator<RendezVous> it = rdvs.iterator();
+              while (it.hasNext()) {
+                  RendezVous rdv = it.next();
+                  if ("connect".equals(rdv.accept_or_connect())) {
+                      it.remove();               
+                      return rdv.come(this);
+                  }
               }
+              RendezVous newRdv = new RendezVous(0);
+              rdvs.add(newRdv);
+              return newRdv.come(this);
           }
-          RendezVous newRdv = new RendezVous(0);
-          rdvs.add(newRdv);
-          return newRdv.come(this);
       } else {
           ArrayList<RendezVous> newList = new ArrayList<>();
-          RendezVous newRdv = new RendezVous(0); // 0 pour accept
+          RendezVous newRdv = new RendezVous(0);
           newList.add(newRdv);
           connection_map.put(port, newList);
           return newRdv.come(this);
@@ -78,20 +82,24 @@ public class CBroker extends Broker {
 
   public Channel make_connection(int port) {
 	    ArrayList<RendezVous> rdvs = connection_map.get(port);
-
 	    if (rdvs != null) {
-	        for (RendezVous rdv : rdvs) {
-	            if (rdv.accept_or_connect().equals("accept")) {
-	                rdvs.remove(rdv);
-	                return rdv.come(this);
+	    	System.out.println("CBroker["+name+"] port="+port+" rdvs.size="+rdvs.size()+" thread="+Thread.currentThread().getName());
+	        synchronized (rdvs) {
+	            java.util.Iterator<RendezVous> it = rdvs.iterator();
+	            while (it.hasNext()) {
+	                RendezVous rdv = it.next();
+	                if ("accept".equals(rdv.accept_or_connect())) {
+	                    it.remove();
+	                    return rdv.come(this);
+	                }
 	            }
+	            RendezVous newRdv = new RendezVous(1);
+	            rdvs.add(newRdv);
+	            return newRdv.come(this);
 	        }
-	        RendezVous newRdv = new RendezVous(1); // 1 pour connect
-	        rdvs.add(newRdv);
-	        return newRdv.come(this);
 	    } else {
 	        ArrayList<RendezVous> newList = new ArrayList<>();
-	        RendezVous newRdv = new RendezVous(1); // 1 pour connect
+	        RendezVous newRdv = new RendezVous(1);
 	        newList.add(newRdv);
 	        connection_map.put(port, newList);
 	        return newRdv.come(this);
