@@ -58,8 +58,10 @@ public class CChannel extends Channel {
 	// Before reading check if other channel disconnected
 	@Override
 	public int read(byte[] bytes, int offset, int length) {
+		if (offset < 0 || length < 0 || offset + length > bytes.length) {
+		    throw new IllegalArgumentException("Offset and length out of bounds");
+		}
 		int bytesRead = 0;
-
 		try {
 			for (int i = 0; i < length; i++) {
 				if (disconnected()) {
@@ -70,6 +72,7 @@ public class CChannel extends Channel {
 			}
 
 		} catch (IllegalStateException e) {
+			System.out.println("Buffer vide!");
 			// Buffer vide alors qu’on voulait lire → fin normale
 			return bytesRead;
 		}
@@ -86,6 +89,12 @@ public class CChannel extends Channel {
 	// Before writing check if other channel disconnected
 	@Override
 	public int write(byte[] bytes, int offset, int length) {
+		if (this.disconnected()) {
+	        throw new IllegalStateException("Cannot write: neighbor channel is disconnected");
+	    }
+		if (offset < 0 || length < 0 || offset + length > bytes.length) {
+		    throw new IllegalArgumentException("Offset and length out of bounds");
+		}
 		return this.neighbor_channel.receive(bytes, offset, length);
 	}
 

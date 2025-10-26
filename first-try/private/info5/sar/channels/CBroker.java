@@ -1,109 +1,77 @@
-/*
- * Copyright (C) 2023 Pr. Olivier Gruber                                    
- *                                                                       
- * This program is free software: you can redistribute it and/or modify  
- * it under the terms of the GNU General Public License as published by  
- * the Free Software Foundation, either version 3 of the License, or     
- * (at your option) any later version.                                   
- *                                                                       
- * This program is distributed in the hope that it will be useful,       
- * but WITHOUT ANY WARRANTY; without even the implied warranty of        
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         
- * GNU General Public License for more details.                          
- *                                                                       
- * You should have received a copy of the GNU General Public License     
- * along with this program.  If not, see <http://www.gnu.org/licenses/>. 
- */
 package info5.sar.channels;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
 
 public class CBroker extends Broker {
-// Contains an Annuaire class which contains a Map of all Brokers
-// Also contains 2 Map one connect Map et one accept Map
-	Map<Integer, ArrayList<RendezVous>> connection_map;
+
+	ConcurrentHashMap<Integer, ArrayList<RendezVous>> connection_map;
 	Annuaire annuaire;
-	
-// This create the 2 accept et connect Map
-// For the accept map the keys are the ports number and the values are a RendezVous 
-// For the connect map the keys are the ports number and the values are a list of RendezVous 
-  public CBroker(String name) {
-    super(name);
-    this.connection_map = new ConcurrentHashMap<Integer, ArrayList<RendezVous>>();
-  }
+	Semaphore mutex = new Semaphore(1);
 
-  public void set_annuaire(Annuaire a) {
-	  annuaire=a;
-  }
-  @Override
-  public Channel accept(int port) {
-      ArrayList<RendezVous> rdvs = connection_map.get(port);
-      if (rdvs != null) {
-          synchronized (rdvs) {
-              java.util.Iterator<RendezVous> it = rdvs.iterator();
-              while (it.hasNext()) {
-                  RendezVous rdv = it.next();
-                  if ("connect".equals(rdv.accept_or_connect())) {
-                      it.remove();               
-                      return rdv.come(this);
-                  }
-              }
-              RendezVous newRdv = new RendezVous(0);
-              rdvs.add(newRdv);
-              return newRdv.come(this);
-          }
-      } else {
-          ArrayList<RendezVous> newList = new ArrayList<>();
-          RendezVous newRdv = new RendezVous(0);
-          newList.add(newRdv);
-          connection_map.put(port, newList);
-          return newRdv.come(this);
-      }
-  }
-
-
-  
-  // When a task connect trough her broker the broker looks inside his annuaire.
-  // If the name of the asked channel doesn't exist then error
-  // If it exists then their is 2 case.
-  // First case their is already a task waiting (inside a RendezVous)with an accept with the right port number
-  // Second case no task waiting so we make the one asking waiting inside a RendezVous that we add to the list of connect of the Broker
-  @Override
-  public Channel connect(String name, int port) {
-	CBroker target = (CBroker) annuaire.get_broker(name);
-	if(target == null) {
-		throw new IllegalArgumentException("Broker " + name + " introuvable");
+	public CBroker(String name) {
+		super(name);
+		this.connection_map = new ConcurrentHashMap<>();
 	}
-    return target.make_connection(port);
-  }
 
-  public Channel make_connection(int port) {
+	public void set_annuaire(Annuaire a) {
+		this.annuaire = a;
+	}
+
+	@Override
+	public Channel accept(int port) {
+		try {
+			return getRendezVous(port, 0); // 0 = accept
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	@Override
+	public Channel connect(String name, int port) {
+		CBroker target = (CBroker) annuaire.get_broker(name);
+		if (target == null)
+			return null;
+		try {
+			return target.getRendezVous(port, 1);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	private Channel getRendezVous(int port, int type) throws InterruptedException {
+	    mutex.acquire();
+	    RendezVous target = null;
+
 	    ArrayList<RendezVous> rdvs = connection_map.get(port);
 	    if (rdvs != null) {
-	    	System.out.println("CBroker["+name+"] port="+port+" rdvs.size="+rdvs.size()+" thread="+Thread.currentThread().getName());
 	        synchronized (rdvs) {
-	            java.util.Iterator<RendezVous> it = rdvs.iterator();
-	            while (it.hasNext()) {
-	                RendezVous rdv = it.next();
-	                if ("accept".equals(rdv.accept_or_connect())) {
-	                    it.remove();
-	                    return rdv.come(this);
+	            for (RendezVous rdv : rdvs) {
+	                if ((type == 0 && "connect".equals(rdv.accept_or_connect())) ||
+	                    (type == 1 && "accept".equals(rdv.accept_or_connect()))) {
+	                    rdvs.remove(rdv);
+	                    target = rdv;
+	                    break;
 	                }
 	            }
-	            RendezVous newRdv = new RendezVous(1);
-	            rdvs.add(newRdv);
-	            return newRdv.come(this);
 	        }
-	    } else {
-	        ArrayList<RendezVous> newList = new ArrayList<>();
-	        RendezVous newRdv = new RendezVous(1);
-	        newList.add(newRdv);
-	        connection_map.put(port, newList);
-	        return newRdv.come(this);
 	    }
+
+	    if (target == null) {
+	        ArrayList<RendezVous> newList = connection_map.get(port);
+	        if (newList == null) {
+	            newList = new ArrayList<>();
+	            connection_map.put(port, newList);
+	        }
+	        target = new RendezVous(type);
+	        newList.add(target);
+	    }
+
+	    mutex.release(); // ✅ libéré avant le blocage potentiel
+	    return target.come(this); // peut bloquer sans bloquer les autres threads
 	}
 
 }
