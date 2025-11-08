@@ -33,6 +33,7 @@ public class CBroker extends Broker {
 	public Channel connect(String name, int port) {
 		CBroker target = (CBroker) annuaire.get_broker(name);
 		if (target == null)
+			// If broker doesn't exist
 			return null;
 		try {
 			return target.getRendezVous(port, 1);
@@ -70,8 +71,8 @@ public class CBroker extends Broker {
 	        newList.add(target);
 	    }
 
-	    mutex.release(); // ✅ libéré avant le blocage potentiel
-	    return target.come(this); // peut bloquer sans bloquer les autres threads
+	    mutex.release(); 
+	    return target.come(this); 
 	}
 
 }

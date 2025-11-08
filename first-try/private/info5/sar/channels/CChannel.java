@@ -28,17 +28,19 @@ public class CChannel extends Channel {
 	private boolean disconnected;
 	private CChannel neighbor_channel;
 	private CircularBuffer circular_buffer;
+	private boolean remote_disconnected;
 
 	protected CChannel(Broker broker, int port) {
 		super(broker);
 		disconnected = false;
-		circular_buffer = new CircularBuffer(8);
+		remote_disconnected=false;
+		circular_buffer = new CircularBuffer(20);
 	}
 
 	protected CChannel(Broker broker) {
 		super(broker);
 		disconnected = false;
-		circular_buffer = new CircularBuffer(8);
+		circular_buffer = new CircularBuffer(20);
 	}
 
 	// added for helping debugging applications.
@@ -58,6 +60,9 @@ public class CChannel extends Channel {
 	// Before reading check if other channel disconnected
 	@Override
 	public int read(byte[] bytes, int offset, int length) {
+		if (this.disconnected()) {
+	        throw new IllegalStateException("Cannot read disconnect");
+	    }
 		if (offset < 0 || length < 0 || offset + length > bytes.length) {
 		    throw new IllegalArgumentException("Offset and length out of bounds");
 		}
@@ -73,7 +78,9 @@ public class CChannel extends Channel {
 
 		} catch (IllegalStateException e) {
 			System.out.println("Buffer vide!");
-			// Buffer vide alors qu’on voulait lire → fin normale
+			// Buffer vide alors qu’on voulait lire
+			if(this.remote_disconnected)
+				disconnect();
 			return bytesRead;
 		}
 		return bytesRead;
@@ -102,25 +109,32 @@ public class CChannel extends Channel {
 	//
 	@Override
 	public void disconnect() {
+		if(this.disconnected==true) {
+			return;
+		}
 		this.disconnected = true;
+		
+		this.neighbor_channel.remote_disconnect();
 	}
 
 	// this methode ask the other channel if it is disonnected and send yes if yes.
 	// To do this the other channel has a get_disconnected() method
 	@Override
 	public boolean disconnected() {
-		return this.neighbor_channel.get_disconnected();
+		return this.disconnected;
 	}
 
-	// This method change the value to true of the boolean disconnect after the
-	// other channel ask for a deconnection
-	public boolean get_disconnected() {
-		return this.disconnected;
+	// To inform the other channel
+	public void remote_disconnect() {
+		this.remote_disconnected=true;
 	}
 
 	// This method is call by the write method from the other channel
 	// It will write inside the buffer
 	public int receive(byte[] bytes, int offset, int length) {
+		// Because of the specification : write operations will succeed on the remote side, dropping the given bytes but indicating that they were written.
+		if(this.disconnected())
+			return length;
 		int cpt = 0;
 		try {
 			for (int i = 0; i < length; i++) {
