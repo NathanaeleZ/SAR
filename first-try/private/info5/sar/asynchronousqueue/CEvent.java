@@ -21,6 +21,7 @@ public class CEvent implements Event {
 	}
 
 	public long getDelay() {
+		// TODO Auto-generated method stub
 		return delay;
 	}
 	

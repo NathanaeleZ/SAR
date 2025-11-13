@@ -107,6 +107,7 @@ public class CChannel extends Channel {
 	// Before writing check if other channel disconnected
 	@Override
 	public int write(byte[] bytes, int offset, int length) {
+		System.out.println(this.circular_buffer);
 		if (this.disconnected()) {
 			throw new IllegalStateException("Cannot write: neighbor channel is disconnected");
 		}

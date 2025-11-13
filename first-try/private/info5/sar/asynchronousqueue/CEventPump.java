@@ -3,52 +3,71 @@ package info5.sar.asynchronousqueue;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
-public class CEventPump extends EventPump{
+import info5.sar.channels.Annuaire;
 
-	List<Event> events;
-	List<Event> delayedEvents;
-	
-	public CEventPump(){
+public class CEventPump extends EventPump {
+
+	private Queue<Event> events;
+	private List<Event> delayedEvents;
+	private static CEventPump instance;
+
+	public CEventPump() {
 		events = new LinkedList<Event>();
 		delayedEvents = new LinkedList<>();
 	}
 
-	public void start(){
-		Thread t = new Thread(this);
-		t.start();
-		this.run();
+	public static synchronized CEventPump getInstance() {
+		if (instance == null) {
+			instance = new CEventPump();
+		}
+		return instance;
 	}
 
-	public void run(){
-		while(true){
+	public void start() {
+		Thread t = new Thread(this);
+		t.start();
+	}
+
+	public void run() {
+		while (true) {
 			// traiter les events normaux
-			while(!events.isEmpty()){
-				Event e = events.remove(0);
-				e.react();
+			synchronized (events) {
+				while (!events.isEmpty()) {
+					Event e = events.poll();
+					e.react();
+				}
 			}
 			// traiter les events retardés
 			long currentTime = System.currentTimeMillis();
-			Iterator<Event> iterator = delayedEvents.iterator();
-			while(iterator.hasNext()){
-				Event e = iterator.next();
-				if(e.getDelay() <= currentTime){
-					e.react();
-					iterator.remove();
+			synchronized (delayedEvents) {
+				Iterator<Event> iterator = delayedEvents.iterator();
+				while (iterator.hasNext()) {
+					CEvent e = (CEvent) iterator.next();
+					if (e.getDelay() <= currentTime) {
+						e.react();
+						iterator.remove();
+					}
 				}
 			}
 		}
 	}
+
 	@Override
 	public void post(Runnable e) {
-		Event event = new CEvent(e);
-		events.add(event);
+		synchronized (events) {
+			Event event = new CEvent(e);
+			events.add(event);
+		}
 	}
 
 	@Override
 	public void post(Runnable e, int delay) {
-		Event event = new CEvent(e, delay);
-		delayedEvents.add(event);
+		synchronized (delayedEvents) {
+			Event event = new CEvent(e, delay);
+			delayedEvents.add(event);
+		}
 	}
 
 }
