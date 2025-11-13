@@ -1,11 +1,19 @@
 package info5.sar.asynchronousqueue;
 
+import info5.sar.channels.Channel;
+
 public class CMessageQueue extends MessageQueue{
+
+	private Channel channel;
+	private Listener listener;
+
+	public CMessageQueue(Channel channel) {
+		this.channel = channel;
+	}
 
 	@Override
 	void setListener(Listener l) {
-		// TODO Auto-generated method stub
-		
+		this.listener = l;
 	}
 
 	@Override
@@ -16,20 +24,19 @@ public class CMessageQueue extends MessageQueue{
 
 	@Override
 	boolean send(byte[] bytes, int offset, int length) {
-		// TODO Auto-generated method stub
+		channel.write(bytes, offset, length);
 		return false;
 	}
 
 	@Override
 	void close() {
-		// TODO Auto-generated method stub
+		channel.disconnect();
 		
 	}
 
 	@Override
 	boolean closed() {
-		// TODO Auto-generated method stub
-		return false;
+		return channel.disconnected();
 	}
 
 }

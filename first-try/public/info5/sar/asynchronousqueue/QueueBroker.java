@@ -1,7 +1,6 @@
 package info5.sar.asynchronousqueue;
 
 public abstract class QueueBroker {
-	abstract QueueBroker(String name);
 	interface AcceptListener {
 	void accepted(MessageQueue queue);
 	}

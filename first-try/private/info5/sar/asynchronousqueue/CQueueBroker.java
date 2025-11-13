@@ -1,15 +1,29 @@
 package info5.sar.asynchronousqueue;
 
+import info5.sar.channels.Broker;
+import info5.sar.channels.Channel;
+import info5.sar.channels.Task;
+
 public class CQueueBroker extends QueueBroker{
 
-	CQueueBroker(String name) {
-		super(name);
-		// TODO Auto-generated constructor stub
+	Broker broker;
+
+	public CQueueBroker(Broker broker) {
+		this.broker = broker;
 	}
 
 	@Override
 	boolean bind(int port, AcceptListener listener) {
-		// TODO Auto-generated method stub
+		new Task(null, broker) {
+			@Override
+			public void run() {
+				while(!this.unbind(0)){
+					Channel channel = broker.accept(port);
+					MessageQueue queue = new CMessageQueue(channel);
+					listener.accepted(queue);
+				}
+			}
+		}.start();
 		return false;
 	}
 
@@ -21,7 +35,9 @@ public class CQueueBroker extends QueueBroker{
 
 	@Override
 	boolean connect(String name, int port, ConnectListener listener) {
-		// TODO Auto-generated method stub
+		Channel channel = broker.connect(name, port);
+		MessageQueue queue = new CMessageQueue(channel);
+		listener.connected(queue);
 		return false;
 	}
 

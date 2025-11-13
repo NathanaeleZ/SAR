@@ -28,19 +28,17 @@ public class CChannel extends Channel {
 	private boolean disconnected;
 	private CChannel neighbor_channel;
 	private CircularBuffer circular_buffer;
-	private boolean remote_disconnected;
 
 	protected CChannel(Broker broker, int port) {
 		super(broker);
 		disconnected = false;
-		remote_disconnected=false;
-		circular_buffer = new CircularBuffer(20);
+		circular_buffer = new CircularBuffer(32);
 	}
 
 	protected CChannel(Broker broker) {
 		super(broker);
 		disconnected = false;
-		circular_buffer = new CircularBuffer(20);
+		circular_buffer = new CircularBuffer(32);
 	}
 
 	// added for helping debugging applications.
@@ -61,27 +59,40 @@ public class CChannel extends Channel {
 	@Override
 	public int read(byte[] bytes, int offset, int length) {
 		if (this.disconnected()) {
-	        throw new IllegalStateException("Cannot read disconnect");
-	    }
+			throw new IllegalStateException("Cannot read disconnect");
+		}
 		if (offset < 0 || length < 0 || offset + length > bytes.length) {
-		    throw new IllegalArgumentException("Offset and length out of bounds");
+			throw new IllegalArgumentException("Offset and length out of bounds");
 		}
 		int bytesRead = 0;
 		try {
-			for (int i = 0; i < length; i++) {
-				if (disconnected()) {
-					return bytesRead;
+			synchronized (circular_buffer) {
+				while (circular_buffer.empty()) {
+					if (this.disconnected())
+						return 0; // plus rien à lire
+					try {
+						circular_buffer.wait();
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						return bytesRead;
+					}
 				}
-				bytes[offset + i] = circular_buffer.pull();
-				bytesRead++;
-			}
+				for (int i = 0; i < length; i++) {
+					if (disconnected()) {
+						return bytesRead;
+					}
+					bytes[offset + i] = circular_buffer.pull();
+					bytesRead++;
+				}
 
+			}
 		} catch (IllegalStateException e) {
 			System.out.println("Buffer vide!");
 			// Buffer vide alors qu’on voulait lire
-			if(this.remote_disconnected)
-				disconnect();
 			return bytesRead;
+		}
+		synchronized (circular_buffer) {
+			circular_buffer.notifyAll();
 		}
 		return bytesRead;
 	}
@@ -97,24 +108,46 @@ public class CChannel extends Channel {
 	@Override
 	public int write(byte[] bytes, int offset, int length) {
 		if (this.disconnected()) {
-	        throw new IllegalStateException("Cannot write: neighbor channel is disconnected");
-	    }
-		if (offset < 0 || length < 0 || offset + length > bytes.length) {
-		    throw new IllegalArgumentException("Offset and length out of bounds");
+			throw new IllegalStateException("Cannot write: neighbor channel is disconnected");
 		}
-		return this.neighbor_channel.receive(bytes, offset, length);
+		if (offset < 0 || length < 0 || offset + length > bytes.length) {
+			throw new IllegalArgumentException("Offset and length out of bounds");
+		}
+		int written = 0;
+		synchronized (neighbor_channel.circular_buffer) {
+			while (neighbor_channel.circular_buffer.full()) {
+				if (this.disconnected() || neighbor_channel.disconnected())
+					return written; // plus rien à écrire
+				try {
+					neighbor_channel.circular_buffer.wait();
+				}catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+						return written;
+				}
+			}
+		}
+		written = this.neighbor_channel.receive(bytes, offset, length);
+		synchronized (neighbor_channel.circular_buffer) {
+			neighbor_channel.circular_buffer.notifyAll();
+		}
+		return written;
 	}
 
 	// This method turn the variable disconnected to true.
 	//
 	@Override
 	public void disconnect() {
-		if(this.disconnected==true) {
+		if (this.disconnected == true) {
 			return;
 		}
 		this.disconnected = true;
-		
-		this.neighbor_channel.remote_disconnect();
+
+		// Réveiller tout lecteur bloqué
+		synchronized (circular_buffer) {
+			circular_buffer.notifyAll();
+		}
+
+		this.neighbor_channel.disconnect();
 	}
 
 	// this methode ask the other channel if it is disonnected and send yes if yes.
@@ -124,20 +157,18 @@ public class CChannel extends Channel {
 		return this.disconnected;
 	}
 
-	// To inform the other channel
-	public void remote_disconnect() {
-		this.remote_disconnected=true;
-	}
-
 	// This method is call by the write method from the other channel
 	// It will write inside the buffer
 	public int receive(byte[] bytes, int offset, int length) {
-		// Because of the specification : write operations will succeed on the remote side, dropping the given bytes but indicating that they were written.
-		if(this.disconnected())
+		// Because of the specification : write operations will succeed on the remote
+		// side, dropping the given bytes but indicating that they were written.
+		if (this.disconnected())
 			return length;
 		int cpt = 0;
 		try {
 			for (int i = 0; i < length; i++) {
+				if (this.disconnected())
+					return cpt;
 				this.circular_buffer.push(bytes[offset + i]);
 				cpt++;
 			}

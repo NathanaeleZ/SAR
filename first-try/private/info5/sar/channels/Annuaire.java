@@ -8,6 +8,7 @@ public class Annuaire {
 // The annuaire contains a Map which associate every name (values ) to their broker
 // When a Broker is created it check first if the name of the new Broker is available
 	
+	private static Annuaire instance;
 	Map<String, Broker> brokers;
 	
 	public Annuaire() {
@@ -21,5 +22,13 @@ public class Annuaire {
 	public Broker get_broker(String name) {
 		return brokers.get(name);
 	}
+	
+	public static synchronized Annuaire getInstance() {
+		if(instance == null) {
+			instance= new Annuaire();
+		}
+		return instance;
+	}
+		
 
 }

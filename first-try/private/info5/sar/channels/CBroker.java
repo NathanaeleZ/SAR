@@ -13,6 +13,8 @@ public class CBroker extends Broker {
 	public CBroker(String name) {
 		super(name);
 		this.connection_map = new ConcurrentHashMap<>();
+		this.annuaire= Annuaire.getInstance();
+		this.annuaire.add(this);
 	}
 
 	public void set_annuaire(Annuaire a) {
@@ -46,17 +48,23 @@ public class CBroker extends Broker {
 	private Channel getRendezVous(int port, int type) throws InterruptedException {
 	    mutex.acquire();
 	    RendezVous target = null;
+	    try {
+	    
 
 	    ArrayList<RendezVous> rdvs = connection_map.get(port);
 	    if (rdvs != null) {
 	        synchronized (rdvs) {
 	            for (RendezVous rdv : rdvs) {
-	                if ((type == 0 && "connect".equals(rdv.accept_or_connect())) ||
+	            	if (type == 0 && "accept".equals(rdv.accept_or_connect())) {
+                        throw new IllegalArgumentException("Un accept existe déjà sur ce port");
+                    }
+	            	else if ((type == 0 && "connect".equals(rdv.accept_or_connect())) ||
 	                    (type == 1 && "accept".equals(rdv.accept_or_connect()))) {
 	                    rdvs.remove(rdv);
 	                    target = rdv;
 	                    break;
 	                }
+	                
 	            }
 	        }
 	    }
@@ -70,8 +78,9 @@ public class CBroker extends Broker {
 	        target = new RendezVous(type);
 	        newList.add(target);
 	    }
-
+	    }finally {
 	    mutex.release(); 
+	    }
 	    return target.come(this); 
 	}
 
