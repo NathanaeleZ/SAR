@@ -15,9 +15,8 @@ public class Launch {
 	static void test1() {
 		CBroker b1 = new CBroker("b1");
 		QueueBroker qb1 = new QueueBroker(b1);
-		Annuaire annuaire = new Annuaire();
+		Annuaire annuaire = Annuaire.getInstance();
 		annuaire.add(b1);
-		b1.set_annuaire(annuaire);
 		Server server1 = new Server(qb1, "server1", List.of(1000), 1024);
 		Client client1 = new Client(qb1, "client1", 1000, "b1", "Hello from client1 , message way too long to test the message queue");
 		server1.start(server1.get_runnable());

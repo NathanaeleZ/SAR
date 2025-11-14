@@ -21,5 +21,7 @@ Nathanaël CHAUVIN
 - 26/10 Implementation du code pendant les vacances
 - 08/10 Tests et Message Queue synchrone
 - 09/10 Début implémentation Asynchrone MessageQueue
-- 13/10 Modification de Channels et Brokers pour respecter la specification, modification des tests, Annuaire sous forme de singleton
+- 12/10 Modification de Channels et Brokers pour respecter la specification, modification des tests, Annuaire sous forme de singleton
+- 13/10 Implementation MessageQueue évenementiel
+- 14/10 MessageQueue évenementiel fonctionnel
 

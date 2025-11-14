@@ -9,7 +9,7 @@ public class Annuaire {
 // When a Broker is created it check first if the name of the new Broker is available
 	
 	private static Annuaire instance;
-	Map<String, Broker> brokers;
+	private Map<String, Broker> brokers;
 	
 	public Annuaire() {
 		brokers=new HashMap<>();

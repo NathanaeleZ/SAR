@@ -12,6 +12,8 @@ public class CEventPump extends EventPump {
 	private Queue<Event> events;
 	private List<Event> delayedEvents;
 	private static CEventPump instance;
+	private volatile boolean running = true;
+	private Thread pumpThread;
 
 	public CEventPump() {
 		events = new LinkedList<Event>();
@@ -26,12 +28,12 @@ public class CEventPump extends EventPump {
 	}
 
 	public void start() {
-		Thread t = new Thread(this);
-		t.start();
+		pumpThread = new Thread(this);
+        pumpThread.start();
 	}
 
 	public void run() {
-		while (true) {
+		while (running && !Thread.currentThread().isInterrupted()) {
 			// traiter les events normaux
 			synchronized (events) {
 				while (!events.isEmpty()) {
@@ -68,6 +70,11 @@ public class CEventPump extends EventPump {
 			Event event = new CEvent(e, delay);
 			delayedEvents.add(event);
 		}
+	}
+	
+	public void shutdown() {
+		 running = false;
+	     	if (pumpThread != null) pumpThread.interrupt();
 	}
 
 }

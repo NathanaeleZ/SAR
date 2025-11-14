@@ -14,8 +14,16 @@ public class QueueBroker{
 		return broker.getName();
 	}
 
-	public MessageQueue accept(int port) {
-		Channel channel = broker.accept(port);
+	public MessageQueue accept(int port) throws InterruptedException {
+		Channel channel=null;
+		try {
+			channel = broker.accept(port);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		if(channel==null)
+			return null;
 		return new MessageQueue(channel);
 	}
 

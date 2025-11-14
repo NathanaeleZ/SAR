@@ -35,7 +35,12 @@ public class Launch {
 		task2.start(new Runnable() {
             @Override
             public void run() {
-				Channel channel = b2.accept(1000);
+            	Channel channel=null;
+				try{
+				channel = b2.accept(1000);
+				} catch(InterruptedException e) {
+					e.printStackTrace();
+				}
 				byte[] buffer = new byte[1024];
 				int bytesRead = channel.read(buffer, 0, buffer.length);
 				if (bytesRead > 0) {
@@ -74,7 +79,12 @@ public class Launch {
 		task2.start(new Runnable() {
             @Override
             public void run() {
-				Channel channel = b1.accept(1000);
+            	Channel channel=null;
+				try{
+				channel = b1.accept(1000);
+				} catch(InterruptedException e) {
+					e.printStackTrace();
+				}
 				byte[] buffer = new byte[1024];
 				int bytesRead = channel.read(buffer, 0, buffer.length);
 				if (bytesRead > 0) {
@@ -110,7 +120,12 @@ public class Launch {
 			public void run() {
 				List<Integer> ports = List.of(3000, 3001, 3002);
 				for (int port : ports) {
-					Channel channel = b.accept(port);
+					Channel channel=null;
+					try{
+					channel = b.accept(port);
+					} catch(InterruptedException e) {
+						e.printStackTrace();
+					}
 					byte[] buffer = new byte[1024];
 					int bytesRead = channel.read(buffer, 0, buffer.length);
 					if (bytesRead > 0) {
@@ -168,7 +183,12 @@ public class Launch {
 			public void run() {
 				List<Integer> ports = List.of(4000, 4001, 4002);
 				for (int port : ports) {
-					Channel channel = b2.accept(port);
+					Channel channel=null;
+					try{
+					channel = b2.accept(port);
+					} catch(InterruptedException e) {
+						e.printStackTrace();
+					}
 					byte[] buffer = new byte[1024];
 					int bytesRead = channel.read(buffer, 0, buffer.length);
 					if (bytesRead > 0) {
@@ -240,7 +260,12 @@ public class Launch {
 		task2.start(new Runnable() {
 			@Override
 			public void run() {
-				Channel channel = b2.accept(5000);
+				Channel channel=null;
+				try{
+				channel = b2.accept(5000);
+				} catch(InterruptedException e) {
+					e.printStackTrace();
+				}
 				byte[] buffer = new byte[64];
 
 

@@ -4,20 +4,19 @@ import java.util.concurrent.Semaphore;
 
 public class RendezVous {
 
-	Semaphore rdv = new Semaphore(0);
-	int nexpected, narrived;
-	int connection;
-	CChannel firstChannel;
+	private Semaphore rdv = new Semaphore(0);
+	private int nexpected, narrived;
+	private int connection;
+	private CChannel firstChannel;
 
-	Semaphore mutex = new Semaphore(1); // exclusion mutuelle
+	private Semaphore mutex = new Semaphore(1); // exclusion mutuelle
 
 	RendezVous(int connection) {
 		this.nexpected = 2;
 		this.connection = connection;
 	}
 
-	CChannel come(Broker broker) {
-		try {
+	CChannel come(Broker broker) throws InterruptedException{
 			mutex.acquire();
 			narrived++;
 			if (narrived < nexpected) {
@@ -35,10 +34,6 @@ public class RendezVous {
 				mutex.release();
 				return secondChannel;
 			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		return null;
 	}
 
 	String accept_or_connect() {

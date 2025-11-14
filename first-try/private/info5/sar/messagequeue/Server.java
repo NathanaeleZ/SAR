@@ -22,7 +22,13 @@ class Server extends Task {
 				System.out.println("Server accepting...");
 				for (Integer port : ports) {
 					System.out.println("Server accepting on port "+port);
-					MessageQueue channel = broker.accept(port);
+					MessageQueue channel=null;
+					try {
+						channel = broker.accept(port);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					byte[] tab = new byte[message_length];
 					try {
 						sleep(5);

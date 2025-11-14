@@ -1,6 +1,5 @@
 package info5.sar.asynchronousqueue;
 
-import info5.sar.asynchronousqueue.MessageQueue.Listener;
 import info5.sar.channels.Channel;
 import info5.sar.channels.Task;
 
@@ -15,14 +14,6 @@ public class CMessageQueue extends MessageQueue {
 		this.channel = channel;
 		receiveTask=new Task("receiveTask",null);
 		receiveTask.start(receiveTask());
-		this.setListener(new Listener() {
-			@Override
-			public void received(byte[] msg) {
-				System.out.println("Message bien reçu:"+new String(msg));
-			}
-			@Override
-			public void closed() {}
-		});
 	}
 
 	@Override
@@ -32,18 +23,12 @@ public class CMessageQueue extends MessageQueue {
 
 	@Override
 	synchronized boolean send(byte[] bytes) {
-		if (this.closed())
-			return false;
-		sendTask = new Task("sendTask", null);
-		sendTask.start(sendTask(bytes, 0, bytes.length));
-		return true;
+		return send(bytes, 0, bytes.length);
 	}
 
 	@Override
 	synchronized boolean send(byte[] bytes, int offset, int length) {
 		if (this.closed())
-			return false;
-		if (sendTask != null)
 			return false;
 		sendTask = new Task("sendTask", null);
 		sendTask.start(sendTask(bytes, offset, length));
@@ -52,7 +37,17 @@ public class CMessageQueue extends MessageQueue {
 
 	@Override
 	void close() {
+		System.out.println("Close no more reception");
 		channel.disconnect();
+		receiveTask.interrupt();
+		while(listener==null) {
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}
+		listener.closed();
 
 	}
 
@@ -65,7 +60,9 @@ public class CMessageQueue extends MessageQueue {
 		return new Runnable() {
 			@Override
 			public void run() {
-				while (!closed()) {
+				while (!Thread.interrupted() && !closed()) {
+					byte[] message;
+					try{
 					int numberOfBytesRead = 0;
 					byte[] lengthBuffer = new byte[4];
 					while (numberOfBytesRead < 4) {
@@ -75,11 +72,24 @@ public class CMessageQueue extends MessageQueue {
 
 					int messageLength = ((lengthBuffer[0] & 0xFF) << 24) | ((lengthBuffer[1] & 0xFF) << 16)
 							| ((lengthBuffer[2] & 0xFF) << 8) | (lengthBuffer[3] & 0xFF);
-					byte[] message = new byte[messageLength];
+					message = new byte[messageLength];
 					numberOfBytesRead = 0;
 					while (numberOfBytesRead < messageLength) {
 						int bytesRead = channel.read(message, numberOfBytesRead, messageLength - numberOfBytesRead);
 						numberOfBytesRead += bytesRead;
+					}} catch(IllegalStateException e) {
+						// Catch close
+						return;
+					}
+					while(listener==null) {
+						try {
+							Thread.sleep(10);
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+						}
+					}
+					if(closed()) {
+						return;
 					}
 					listener.received(message);
 				}
@@ -93,7 +103,12 @@ public class CMessageQueue extends MessageQueue {
 			public void run() {
 				int written = 0;
 				while (written < length) {
+					try{
 					written += channel.write(bytes, offset + written, length - written);
+					} catch(IllegalStateException e) {
+						// Catch close(
+						return;
+					}
 				}
 			};
 		};

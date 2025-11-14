@@ -48,7 +48,7 @@ public abstract class Broker {
    * @throws IllegalArgumentException if there is already 
    *         an accept pending on the given port.
    */
-  public abstract Channel accept(int port);
+  public abstract Channel accept(int port)throws InterruptedException;;
   
   /*
    * Attempts a connection to the given port, via 

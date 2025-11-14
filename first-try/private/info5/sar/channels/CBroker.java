@@ -6,9 +6,9 @@ import java.util.concurrent.Semaphore;
 
 public class CBroker extends Broker {
 
-	ConcurrentHashMap<Integer, ArrayList<RendezVous>> connection_map;
-	Annuaire annuaire;
-	Semaphore mutex = new Semaphore(1);
+	private ConcurrentHashMap<Integer, ArrayList<RendezVous>> connection_map;
+	private Annuaire annuaire;
+	private Semaphore mutex = new Semaphore(1);
 
 	public CBroker(String name) {
 		super(name);
@@ -17,18 +17,11 @@ public class CBroker extends Broker {
 		this.annuaire.add(this);
 	}
 
-	public void set_annuaire(Annuaire a) {
-		this.annuaire = a;
-	}
 
 	@Override
-	public Channel accept(int port) {
-		try {
+	public Channel accept(int port) throws InterruptedException{
 			return getRendezVous(port, 0); // 0 = accept
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-			return null;
-		}
+
 	}
 
 	@Override

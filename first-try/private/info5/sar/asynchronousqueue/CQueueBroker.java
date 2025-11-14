@@ -9,44 +9,35 @@ import info5.sar.channels.Task;
 
 public class CQueueBroker extends QueueBroker {
 
-	Broker broker;
-	Task bind;
-	Task connect;
-	CEventPump pump;
-	Map binds;
+	private Broker broker;
+	private Task bind;
+	private Task connect;
+	private CEventPump pump;
+	private Map binds;
 
 	public CQueueBroker(Broker broker) {
 		this.broker = broker;
 		pump = CEventPump.getInstance();
-		binds = new HashMap<Integer,Task>();
+		binds = new HashMap<Integer,BindTask>();
 	}
 
 	@Override
 	boolean bind(int port, AcceptListener listener) {
-		Task bind = (Task) binds.get(port);
+		BindTask bind = (BindTask) binds.get(port);
 		if (bind != null) {
 			// Déjà bind sur ce port
 			return false;
 		}
-		bind = new Task("bind", broker);
+		bind = new BindTask(port, listener);
 		binds.put(port, bind);
-		bind.start(new Runnable() {
-			@Override
-			public void run() {
-				while (true) {
-					Channel channel = broker.accept(port);
-					MessageQueue messageQueue = new CMessageQueue(channel);
-					pump.post(() -> listener.accepted(messageQueue));
-
-				}
-			}
-		});
+		bind.start();
 		return true;
 	}
+			
 
 	@Override
 	boolean unbind(int port) {
-		Task bind= (Task) binds.get(port);
+		BindTask bind= (BindTask) binds.get(port);
 		if(bind == null) {
 			// Pas de bind sur ce port
 			return false;
@@ -63,12 +54,49 @@ public class CQueueBroker extends QueueBroker {
 			@Override
 			public void run() {
 				Channel channel = broker.connect(name, port);
+				if (channel == null) {
+					pump.post(() -> listener.refused());
+					return;
+				}
 				MessageQueue messageQueue = new CMessageQueue(channel);
 				pump.post(() -> listener.connected(messageQueue));
 				
 			}
 		});
 		return true;
+	}
+
+	class BindTask extends Thread{
+		private int port;
+		private AcceptListener listener;
+
+		public BindTask(int port, AcceptListener listener) {
+			this.port = port;
+			this.listener = listener;
+		}
+
+
+		@Override
+		public void run() {
+		    while (!Thread.currentThread().isInterrupted()) {
+		        try {
+		            Channel channel = broker.accept(port);
+		            if (channel == null) continue;
+
+		            MessageQueue messageQueue = new CMessageQueue(channel);
+		            pump.post(() -> listener.accepted(messageQueue));
+
+		        } catch (InterruptedException e) {
+		        	System.out.println("INTERRUPTED");
+		        	return;  
+
+		        } catch (Exception e) {
+		            e.printStackTrace();
+		            continue; // ne pas tuer le bind !
+		        }
+		    }
+		}
+
 	}
 
 }
